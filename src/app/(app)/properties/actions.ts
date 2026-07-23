@@ -24,6 +24,12 @@ export type PropertyInput = {
   iptu: number | null;
   status: PropertyStatus;
   notes: string | null;
+  bedrooms: number | null;
+  bathrooms: number | null;
+  suites: number | null;
+  parkingSpots: number | null;
+  areaM2: number | null;
+  mapsUrl: string | null;
 };
 
 export async function createProperty(input: PropertyInput) {
@@ -46,6 +52,12 @@ export async function createProperty(input: PropertyInput) {
       iptu: input.iptu,
       status: input.status,
       notes: input.notes,
+      bedrooms: input.bedrooms,
+      bathrooms: input.bathrooms,
+      suites: input.suites,
+      parking_spots: input.parkingSpots,
+      area_m2: input.areaM2,
+      maps_url: input.mapsUrl,
       created_by: member.id,
     })
     .select("id")
@@ -72,6 +84,12 @@ export async function updateProperty(id: string, input: PropertyInput) {
       iptu: input.iptu,
       status: input.status,
       notes: input.notes,
+      bedrooms: input.bedrooms,
+      bathrooms: input.bathrooms,
+      suites: input.suites,
+      parking_spots: input.parkingSpots,
+      area_m2: input.areaM2,
+      maps_url: input.mapsUrl,
     })
     .eq("id", id);
 

@@ -151,6 +151,9 @@ export type Database = {
       properties: {
         Row: {
           address: string | null
+          area_m2: number | null
+          bathrooms: number | null
+          bedrooms: number | null
           condo_fee: number | null
           created_at: string
           created_by: string | null
@@ -161,15 +164,21 @@ export type Database = {
           images: string[]
           iptu: number | null
           listing_url: string | null
+          maps_url: string | null
           notes: string | null
+          parking_spots: number | null
           rent_price: number | null
           status: string
+          suites: number | null
           title: string
           total_monthly_cost: number | null
           updated_at: string
         }
         Insert: {
           address?: string | null
+          area_m2?: number | null
+          bathrooms?: number | null
+          bedrooms?: number | null
           condo_fee?: number | null
           created_at?: string
           created_by?: string | null
@@ -180,15 +189,21 @@ export type Database = {
           images?: string[]
           iptu?: number | null
           listing_url?: string | null
+          maps_url?: string | null
           notes?: string | null
+          parking_spots?: number | null
           rent_price?: number | null
           status?: string
+          suites?: number | null
           title: string
           total_monthly_cost?: number | null
           updated_at?: string
         }
         Update: {
           address?: string | null
+          area_m2?: number | null
+          bathrooms?: number | null
+          bedrooms?: number | null
           condo_fee?: number | null
           created_at?: string
           created_by?: string | null
@@ -199,9 +214,12 @@ export type Database = {
           images?: string[]
           iptu?: number | null
           listing_url?: string | null
+          maps_url?: string | null
           notes?: string | null
+          parking_spots?: number | null
           rent_price?: number | null
           status?: string
+          suites?: number | null
           title?: string
           total_monthly_cost?: number | null
           updated_at?: string

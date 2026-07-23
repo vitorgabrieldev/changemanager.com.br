@@ -4,6 +4,7 @@ import { App, Button, Drawer, Form, Input, Select } from "antd";
 import { useEffect, useRef, useTransition } from "react";
 import { PiX } from "react-icons/pi";
 import { CurrencyInput } from "@/components/ui/currency-input";
+import { NumberInput } from "@/components/ui/number-input";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { PROPERTY_STATUSES } from "@/lib/constants/properties";
 import type { PropertyStatus } from "@/lib/types/database";
@@ -23,6 +24,12 @@ export type PropertyFormValues = {
   iptu?: number;
   status: PropertyStatus;
   notes?: string;
+  bedrooms?: number;
+  bathrooms?: number;
+  suites?: number;
+  parkingSpots?: number;
+  areaM2?: number;
+  mapsUrl?: string;
 };
 
 function isEmptyRichText(html?: string) {
@@ -80,6 +87,12 @@ export function PropertyFormModal({
           iptu: values.iptu ?? null,
           status: values.status,
           notes: isEmptyRichText(values.notes) ? null : values.notes!,
+          bedrooms: values.bedrooms ?? null,
+          bathrooms: values.bathrooms ?? null,
+          suites: values.suites ?? null,
+          parkingSpots: values.parkingSpots ?? null,
+          areaM2: values.areaM2 ?? null,
+          mapsUrl: values.mapsUrl?.trim() || null,
         });
         await imageManagerRef.current?.commitPendingUploads(savedId);
         onClose();
@@ -132,6 +145,38 @@ export function PropertyFormModal({
 
         <Form.Item name="listingUrl" label="Link do anúncio">
           <Input placeholder="https://..." />
+        </Form.Item>
+
+        <div className="flex gap-3">
+          <Form.Item name="bedrooms" label="Quartos" className="min-w-0 flex-1">
+            <NumberInput placeholder="0" />
+          </Form.Item>
+          <Form.Item name="bathrooms" label="Banheiros" className="min-w-0 flex-1">
+            <NumberInput placeholder="0" />
+          </Form.Item>
+        </div>
+
+        <div className="flex gap-3">
+          <Form.Item name="suites" label="Suítes" className="min-w-0 flex-1">
+            <NumberInput placeholder="0" />
+          </Form.Item>
+          <Form.Item name="parkingSpots" label="Vagas" className="min-w-0 flex-1">
+            <NumberInput placeholder="0" />
+          </Form.Item>
+        </div>
+
+        <Form.Item name="areaM2" label="Metragem">
+          <NumberInput step={0.5} suffix="m²" placeholder="0" />
+        </Form.Item>
+
+        <Form.Item
+          name="mapsUrl"
+          label="Localização (Google Maps)"
+        >
+          <Input.TextArea
+            placeholder="https://maps.google.com/... ou o <iframe> do Google Maps"
+            autoSize={{ minRows: 2, maxRows: 4 }}
+          />
         </Form.Item>
 
         <div className="flex gap-3">

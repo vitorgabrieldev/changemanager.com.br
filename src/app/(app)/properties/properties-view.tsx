@@ -167,21 +167,23 @@ export function PropertiesView({
       fixed: "left",
       width: 220,
       render: (_, property) => (
-        <div>
-          <div className="flex items-center gap-1.5">
-            <Text strong className="text-foreground-strong">
-              {property.title}
-            </Text>
-            {property.listing_url && (
-              <span onClick={(e) => e.stopPropagation()}>
-                <Tooltip title="Ver anúncio">
-                  <a href={property.listing_url} target="_blank" rel="noreferrer">
-                    <PiLink className="text-foreground-muted" />
-                  </a>
-                </Tooltip>
-              </span>
-            )}
-          </div>
+        <div className="flex min-w-0 items-center gap-1.5">
+          <Text
+            strong
+            ellipsis={{ tooltip: property.title }}
+            className="min-w-0 text-foreground-strong"
+          >
+            {property.title}
+          </Text>
+          {property.listing_url && (
+            <span onClick={(e) => e.stopPropagation()} className="shrink-0">
+              <Tooltip title="Ver anúncio">
+                <a href={property.listing_url} target="_blank" rel="noreferrer">
+                  <PiLink className="text-foreground-muted" />
+                </a>
+              </Tooltip>
+            </span>
+          )}
         </div>
       ),
     },
@@ -412,6 +414,12 @@ function toInitialValues(
     condoFee: property.condo_fee ?? undefined,
     iptu: property.iptu ?? undefined,
     status: property.status as PropertyStatus,
+    bedrooms: property.bedrooms ?? undefined,
+    bathrooms: property.bathrooms ?? undefined,
+    suites: property.suites ?? undefined,
+    parkingSpots: property.parking_spots ?? undefined,
+    areaM2: property.area_m2 ?? undefined,
+    mapsUrl: property.maps_url ?? undefined,
     notes: property.notes ?? undefined,
   };
 }

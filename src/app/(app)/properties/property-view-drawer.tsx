@@ -14,6 +14,7 @@ import {
   propertyStatusLabel,
 } from "@/lib/constants/properties";
 import type { HouseholdMember } from "@/lib/data/household";
+import { toEmbeddableMapsUrl } from "@/lib/maps";
 import type { Database } from "@/lib/types/database";
 import { PropertyImageCarousel } from "./property-image-carousel";
 import type { PropertyImage } from "./property-image-manager";
@@ -70,6 +71,16 @@ export function PropertyViewDrawer({
   const avg = scores.length
     ? scores.reduce((sum, s) => sum + s, 0) / scores.length
     : null;
+  const mapEmbedUrl = toEmbeddableMapsUrl(property?.maps_url);
+  const hasRoomDetails =
+    property &&
+    [
+      property.bedrooms,
+      property.bathrooms,
+      property.suites,
+      property.parking_spots,
+      property.area_m2,
+    ].some((v) => v !== null);
 
   return (
     <Drawer
@@ -138,6 +149,68 @@ export function PropertyViewDrawer({
               </div>
             )}
           </div>
+
+          {hasRoomDetails && (
+            <Section label="Características">
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <Text className="block text-xs text-foreground-muted">
+                    Quartos
+                  </Text>
+                  <Text className="text-foreground-strong">
+                    {property.bedrooms ?? "—"}
+                  </Text>
+                </div>
+                <div>
+                  <Text className="block text-xs text-foreground-muted">
+                    Suítes
+                  </Text>
+                  <Text className="text-foreground-strong">
+                    {property.suites ?? "—"}
+                  </Text>
+                </div>
+                <div>
+                  <Text className="block text-xs text-foreground-muted">
+                    Banheiros
+                  </Text>
+                  <Text className="text-foreground-strong">
+                    {property.bathrooms ?? "—"}
+                  </Text>
+                </div>
+                <div>
+                  <Text className="block text-xs text-foreground-muted">
+                    Vagas
+                  </Text>
+                  <Text className="text-foreground-strong">
+                    {property.parking_spots ?? "—"}
+                  </Text>
+                </div>
+                <div>
+                  <Text className="block text-xs text-foreground-muted">
+                    Metragem
+                  </Text>
+                  <Text className="text-foreground-strong">
+                    {property.area_m2 !== null ? `${property.area_m2} m²` : "—"}
+                  </Text>
+                </div>
+              </div>
+            </Section>
+          )}
+
+          {mapEmbedUrl && (
+            <Section label="Localização">
+              <div className="overflow-hidden rounded-sm border border-border">
+                <iframe
+                  src={mapEmbedUrl}
+                  className="h-56 w-full"
+                  style={{ border: 0 }}
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  allowFullScreen
+                />
+              </div>
+            </Section>
+          )}
 
           <Section label="Custos">
             <div className="grid grid-cols-2 gap-3">
