@@ -64,7 +64,7 @@ export function RichTextEditor({
 
   return (
     <div
-      className={`overflow-hidden rounded-lg ${editable ? "border border-border bg-surface focus-within:border-accent" : ""} ${className ?? ""}`}
+      className={`overflow-hidden rounded-sm ${editable ? "border border-border bg-surface focus-within:border-accent" : ""} ${className ?? ""}`}
     >
       {editable && (
         <div className="flex items-center gap-0.5 border-b border-border px-2 py-1.5">
@@ -118,7 +118,7 @@ function ToolbarButton({
     <button
       type="button"
       onClick={onClick}
-      className={`flex h-7 w-7 items-center justify-center rounded-md transition-colors ${
+      className={`flex h-7 w-7 items-center justify-center rounded-sm transition-colors ${
         active
           ? "bg-accent-soft text-accent"
           : "text-foreground-muted hover:bg-surface-muted hover:text-foreground-strong"

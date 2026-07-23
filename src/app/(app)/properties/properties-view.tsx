@@ -13,7 +13,6 @@ import {
   Button,
   Dropdown,
   Empty,
-  Popconfirm,
   Rate,
   Table,
   Tag,
@@ -88,7 +87,7 @@ export function PropertiesView({
     | { mode: "view"; property: Property }
     | null
   >(null);
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
 
   // Re-sincroniza o estado otimista quando o server component reenvia novos
   // props (após revalidatePath). Ajustar durante o render (em vez de useEffect)
@@ -277,7 +276,7 @@ export function PropertiesView({
       title: "",
       key: "actions",
       fixed: "right",
-      width: 50,
+      width: 64,
       render: (_, property) => (
         <span onClick={(e) => e.stopPropagation()}>
           <Dropdown
@@ -294,21 +293,26 @@ export function PropertiesView({
                   key: "delete",
                   danger: true,
                   icon: <PiTrash />,
-                  label: (
-                    <Popconfirm
-                      title="Excluir imóvel?"
-                      onConfirm={() => handleDelete(property)}
-                      okText="Excluir"
-                      cancelText="Cancelar"
-                    >
-                      Excluir
-                    </Popconfirm>
-                  ),
+                  label: "Excluir",
+                  onClick: () => {
+                    modal.confirm({
+                      title: "Excluir imóvel?",
+                      content: `"${property.title}" vai ser removido e não dá pra desfazer.`,
+                      okText: "Excluir",
+                      okButtonProps: { danger: true },
+                      cancelText: "Cancelar",
+                      onOk: () => handleDelete(property),
+                    });
+                  },
                 },
               ],
             }}
           >
-            <Button type="text" size="small" icon={<PiDotsThreeVertical size={16} />} />
+            <Button
+              type="text"
+              icon={<PiDotsThreeVertical size={20} />}
+              className="!h-9 !w-9"
+            />
           </Dropdown>
         </span>
       ),
@@ -317,7 +321,7 @@ export function PropertiesView({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between gap-4 rounded-2xl border border-border bg-surface p-5 shadow-sm">
+      <div className="flex items-center justify-between gap-4 rounded-sm border border-border bg-surface p-5 shadow-sm">
         <div>
           <Title level={4} className="!mb-1 !text-foreground-strong">
             Imóveis
@@ -336,7 +340,7 @@ export function PropertiesView({
         </Button>
       </div>
 
-      <div className="rounded-2xl border border-border bg-surface p-2 shadow-sm">
+      <div className="rounded-sm border border-border bg-surface p-2 shadow-sm">
         {properties.length === 0 ? (
           <Empty
             className="py-10"

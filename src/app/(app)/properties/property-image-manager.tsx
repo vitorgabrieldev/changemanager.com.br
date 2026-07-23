@@ -31,7 +31,10 @@ export const PropertyImageManager = forwardRef<
     initialImages.map((img) => ({ key: img.path, url: img.url })),
   );
   const [syncedImages, setSyncedImages] = useState(initialImages);
-  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{
+    current: number;
+    total: number;
+  } | null>(null);
   const [removingKey, setRemovingKey] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const itemsRef = useRef(items);
@@ -61,36 +64,46 @@ export const PropertyImageManager = forwardRef<
   );
 
   async function handleFileChange(e: ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
+    const files = Array.from(e.target.files ?? []);
     e.target.value = "";
-    if (!file) return;
+    if (files.length === 0) return;
 
-    if (!file.type.startsWith("image/")) {
-      message.error("Envie apenas imagens.");
-      return;
+    const images = files.filter((file) => file.type.startsWith("image/"));
+    if (images.length < files.length) {
+      message.error("Só imagens são aceitas — o restante foi ignorado.");
     }
+    if (images.length === 0) return;
 
     if (!propertyId) {
       // Imóvel ainda não existe: fica só local até o "Salvar" publicar junto.
       setItems((prev) => [
         ...prev,
-        { key: crypto.randomUUID(), url: URL.createObjectURL(file), file },
+        ...images.map((file) => ({
+          key: crypto.randomUUID(),
+          url: URL.createObjectURL(file),
+          file,
+        })),
       ]);
       return;
     }
 
-    setUploading(true);
+    setUploadProgress({ current: 0, total: images.length });
     try {
-      const formData = new FormData();
-      formData.set("file", file);
-      const result = await uploadPropertyImage(propertyId, formData);
-      setItems((prev) => [...prev, { key: result.path, url: result.url }]);
+      for (const [index, file] of images.entries()) {
+        const formData = new FormData();
+        formData.set("file", file);
+        // Sequencial de propósito: uploadPropertyImage lê e regrava
+        // `images` inteiro, então uploads em paralelo pisariam um no outro.
+        const result = await uploadPropertyImage(propertyId, formData);
+        setItems((prev) => [...prev, { key: result.path, url: result.url }]);
+        setUploadProgress({ current: index + 1, total: images.length });
+      }
     } catch (err) {
       message.error(
-        err instanceof Error ? err.message : "Não foi possível enviar a imagem.",
+        err instanceof Error ? err.message : "Não foi possível enviar as imagens.",
       );
     } finally {
-      setUploading(false);
+      setUploadProgress(null);
     }
   }
 
@@ -120,7 +133,7 @@ export const PropertyImageManager = forwardRef<
       {items.map((item) => (
         <div
           key={item.key}
-          className="group relative aspect-square overflow-hidden rounded-lg border border-border bg-surface-muted"
+          className="group relative aspect-square overflow-hidden rounded-sm border border-border bg-surface-muted"
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={item.url} alt="" className="h-full w-full object-cover" />
@@ -146,9 +159,14 @@ export const PropertyImageManager = forwardRef<
         </div>
       ))}
 
-      <label className="flex aspect-square cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-border text-foreground-muted transition-colors hover:border-accent hover:text-accent">
-        {uploading ? (
-          <Loader variant="spin" size={22} />
+      <label className="flex aspect-square cursor-pointer flex-col items-center justify-center gap-1 rounded-sm border border-dashed border-border text-foreground-muted transition-colors hover:border-accent hover:text-accent">
+        {uploadProgress ? (
+          <>
+            <Loader variant="spin" size={22} />
+            <span className="text-xs">
+              {uploadProgress.current}/{uploadProgress.total}
+            </span>
+          </>
         ) : (
           <>
             <PiUploadSimple size={18} />
@@ -158,9 +176,10 @@ export const PropertyImageManager = forwardRef<
         <input
           type="file"
           accept="image/*"
+          multiple
           style={{ display: "none" }}
           onChange={handleFileChange}
-          disabled={uploading}
+          disabled={uploadProgress !== null}
         />
       </label>
     </div>

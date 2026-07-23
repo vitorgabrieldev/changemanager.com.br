@@ -9,7 +9,7 @@ export function LoginForm({ next, error }: { next: string; error?: string }) {
         <input type="hidden" name="next" value={next} />
         <button
           type="submit"
-          className="flex items-center gap-3 rounded-md border border-border bg-surface px-5 py-3 text-sm font-medium text-foreground-strong shadow-sm transition hover:border-foreground-muted hover:shadow-md"
+          className="flex items-center gap-3 rounded-sm border border-border bg-surface px-5 py-3 text-sm font-medium text-foreground-strong shadow-sm transition hover:border-foreground-muted hover:shadow-md"
         >
           <GoogleIcon />
           Acessar Amber

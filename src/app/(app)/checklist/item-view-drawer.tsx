@@ -72,7 +72,7 @@ export function ChecklistItemViewDrawer({
               {checklistCategoryLabel(item.category)}
             </Tag>
             {item.due_date && (
-              <span className="inline-flex items-center gap-1 rounded-md bg-surface-muted px-2 py-1 text-xs font-medium text-foreground-muted">
+              <span className="inline-flex items-center gap-1 rounded-sm bg-surface-muted px-2 py-1 text-xs font-medium text-foreground-muted">
                 <PiCalendarBlank size={13} />
                 {dayjs(item.due_date).format("DD/MM/YYYY")}
               </span>

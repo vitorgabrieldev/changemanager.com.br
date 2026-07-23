@@ -56,7 +56,7 @@ export function AppShell({
       >
         <div className="flex h-14 shrink-0 items-center gap-2 border-b border-border px-5">
           <div
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-sm font-bold text-white"
+            className="flex h-8 w-8 items-center justify-center rounded-sm text-sm font-bold text-white"
             style={{ background: "linear-gradient(135deg, #cb4b16, #b58900)" }}
           >
             A

@@ -15,10 +15,10 @@ export default function ChecklistLoading() {
       {Array.from({ length: GROUPS }).map((_, groupIndex) => (
         <div
           key={groupIndex}
-          className="rounded-2xl border border-border bg-surface shadow-sm"
+          className="rounded-sm border border-border bg-surface shadow-sm"
         >
           <div className="flex items-center gap-2 border-b border-border px-5 py-3">
-            <SkeletonBone className="h-5 w-24 !rounded-md" />
+            <SkeletonBone className="h-5 w-24 !rounded-sm" />
           </div>
           <div>
             {Array.from({ length: ROWS_PER_GROUP }).map((_, rowIndex) => (

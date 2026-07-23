@@ -14,7 +14,6 @@ import {
   Checkbox,
   Dropdown,
   Empty,
-  Popconfirm,
   Progress,
   Tag,
   Tooltip,
@@ -37,7 +36,7 @@ import {
 } from "./item-form-modal";
 import { ChecklistItemViewDrawer } from "./item-view-drawer";
 
-const { Text } = Typography;
+const { Title, Text } = Typography;
 
 type ChecklistItem = Database["public"]["Tables"]["checklist_items"]["Row"];
 
@@ -57,7 +56,7 @@ export function ChecklistView({
     | { mode: "view"; item: ChecklistItem }
     | null
   >(null);
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
 
   // Re-sincroniza o estado otimista quando o server component reenvia novos
   // props (após revalidatePath). Ajustar durante o render (em vez de useEffect)
@@ -115,21 +114,27 @@ export function ChecklistView({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center gap-4">
-        <Progress
-          percent={percent}
-          strokeColor="#2aa198"
-          showInfo={false}
-          size="small"
-          className="max-w-xs flex-1"
-        />
-        <Text className="text-xs whitespace-nowrap text-foreground-muted">
-          {done}/{total} · {percent}%
-        </Text>
+      <div className="flex items-center justify-between gap-4 rounded-sm border border-border bg-surface p-5 shadow-sm">
+        <div className="min-w-0 flex-1">
+          <Title level={4} className="!mb-1 !text-foreground-strong">
+            Checklist
+          </Title>
+          <div className="flex items-center gap-3">
+            <Progress
+              percent={percent}
+              strokeColor="#2aa198"
+              showInfo={false}
+              size="small"
+              className="max-w-xs flex-1"
+            />
+            <Text className="text-xs whitespace-nowrap text-foreground-muted">
+              {done}/{total} · {percent}%
+            </Text>
+          </div>
+        </div>
         <Button
           type="primary"
           icon={<PiPlus size={16} />}
-          className="ml-auto"
           onClick={() => setModalState({ mode: "create" })}
         >
           Novo item
@@ -137,7 +142,7 @@ export function ChecklistView({
       </div>
 
       {grouped.length === 0 && (
-        <div className="rounded-2xl border border-border bg-surface p-10 shadow-sm">
+        <div className="rounded-sm border border-border bg-surface p-10 shadow-sm">
           <Empty description="Nenhum item ainda. Bora adicionar o primeiro." />
         </div>
       )}
@@ -145,7 +150,7 @@ export function ChecklistView({
       {grouped.map((group) => (
         <div
           key={group.value}
-          className="rounded-2xl border border-border bg-surface shadow-sm"
+          className="rounded-sm border border-border bg-surface shadow-sm"
         >
           <div className="flex items-center gap-2 border-b border-border px-5 py-3">
             <Tag color={group.tagColor}>{group.label}</Tag>
@@ -214,16 +219,17 @@ export function ChecklistView({
                             key: "delete",
                             danger: true,
                             icon: <PiTrash />,
-                            label: (
-                              <Popconfirm
-                                title="Excluir item?"
-                                onConfirm={() => handleDelete(item)}
-                                okText="Excluir"
-                                cancelText="Cancelar"
-                              >
-                                Excluir
-                              </Popconfirm>
-                            ),
+                            label: "Excluir",
+                            onClick: () => {
+                              modal.confirm({
+                                title: "Excluir item?",
+                                content: `"${item.title}" vai ser removido e não dá pra desfazer.`,
+                                okText: "Excluir",
+                                okButtonProps: { danger: true },
+                                cancelText: "Cancelar",
+                                onOk: () => handleDelete(item),
+                              });
+                            },
                           },
                         ],
                       }}
@@ -286,7 +292,7 @@ function DueDateTag({ date, done }: { date: string; done: boolean }) {
 
   return (
     <span
-      className={`inline-flex shrink-0 items-center gap-1 rounded-md px-2 py-1 text-xs font-medium ${colorClass}`}
+      className={`inline-flex shrink-0 items-center gap-1 rounded-sm px-2 py-1 text-xs font-medium ${colorClass}`}
     >
       <PiCalendarBlank size={13} />
       {due.format("DD/MM")}

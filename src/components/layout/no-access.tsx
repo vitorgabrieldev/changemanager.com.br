@@ -9,8 +9,8 @@ const { Title, Paragraph } = Typography;
 export function NoAccess() {
   return (
     <main className="flex min-h-screen items-center justify-center px-4">
-      <div className="w-full max-w-sm rounded-2xl border border-border bg-surface p-8 text-center shadow-sm">
-        <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-danger-soft text-danger">
+      <div className="w-full max-w-sm rounded-sm border border-border bg-surface p-8 text-center shadow-sm">
+        <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-sm bg-danger-soft text-danger">
           <PiLockSimple className="text-xl" />
         </div>
         <Title level={4} className="!mb-1 !text-foreground-strong">

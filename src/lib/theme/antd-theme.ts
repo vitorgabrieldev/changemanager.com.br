@@ -90,7 +90,7 @@ export const antdTheme: ThemeConfig = {
       optionSelectedBg: "#d9f0ee",
     },
     Table: {
-      borderRadius: 10,
+      headerBorderRadius: 2,
       headerBg: solarized.base2,
       headerColor: solarized.base01,
       rowHoverBg: "#f7f7f8",

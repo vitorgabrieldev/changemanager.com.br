@@ -20,7 +20,7 @@ export function PropertyImageCarousel({
   return (
     <div
       ref={containerRef}
-      className="overflow-hidden rounded-xl border border-border"
+      className="overflow-hidden rounded-sm border border-border"
     >
       <Carousel arrows dots={images.length > 1} infinite={images.length > 1}>
         {images.map((img) => (

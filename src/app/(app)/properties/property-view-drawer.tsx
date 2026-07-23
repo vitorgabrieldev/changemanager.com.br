@@ -39,7 +39,7 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-lg border border-border bg-surface p-3">
+    <div className="rounded-sm border border-border bg-surface p-3">
       <Text className="mb-2 block text-xs font-medium tracking-wide text-foreground-muted uppercase">
         {label}
       </Text>
@@ -103,7 +103,7 @@ export function PropertyViewDrawer({
                 {property.title}
               </Title>
               {avg !== null && (
-                <div className="flex shrink-0 items-center gap-1 rounded-md bg-warning-soft px-2 py-1 text-warning">
+                <div className="flex shrink-0 items-center gap-1 rounded-sm bg-warning-soft px-2 py-1 text-warning">
                   <PiStarFill size={13} />
                   <Text strong className="!text-warning text-xs">
                     {avg.toFixed(1)}

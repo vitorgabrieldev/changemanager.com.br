@@ -81,7 +81,7 @@ export function CurrencyInput({
       onKeyDown={handleKeyDown}
       onPaste={handlePaste}
       onChange={() => {}}
-      className={`h-[34px] w-full rounded-lg border border-border bg-surface px-3 text-sm text-foreground-strong outline-none transition-colors placeholder:text-foreground-muted hover:border-accent focus:border-accent ${className ?? ""}`}
+      className={`h-[34px] w-full rounded-sm border border-border bg-surface px-3 text-sm text-foreground-strong outline-none transition-colors placeholder:text-foreground-muted hover:border-accent focus:border-accent ${className ?? ""}`}
     />
   );
 }
