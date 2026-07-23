@@ -1,0 +1,170 @@
+@import "tailwindcss";
+
+/*
+  Paleta inspirada no Solarized Light (Ethan Schoonover), suavizada em tons
+  pastel para uma UI compacta e moderna. Mantemos os matizes originais do
+  Solarized mas elevamos a luminosidade/reduzimos a saturação dos acentos.
+*/
+:root {
+  --sol-base3: #fdf6e3;
+  --sol-base2: #eee8d5;
+  --sol-base1: #93a1a1;
+  --sol-base0: #839496;
+  --sol-base00: #657b83;
+  --sol-base01: #586e75;
+  --sol-base02: #073642;
+  --sol-base03: #002b36;
+
+  --sol-yellow: #b58900;
+  --sol-orange: #cb4b16;
+  --sol-red: #dc322f;
+  --sol-magenta: #d33682;
+  --sol-violet: #6c71c4;
+  --sol-blue: #268bd2;
+  --sol-cyan: #2aa198;
+  --sol-green: #859900;
+
+  --background: var(--sol-base3);
+  --surface: #ffffff;
+  --surface-muted: var(--sol-base2);
+  --foreground: var(--sol-base01);
+  --foreground-strong: var(--sol-base02);
+  --foreground-muted: var(--sol-base1);
+  --border: #e4ddc7;
+
+  --accent: var(--sol-cyan);
+  --accent-soft: #d9f0ee;
+  --info: var(--sol-blue);
+  --info-soft: #dcebf7;
+  --success: var(--sol-green);
+  --success-soft: #e6efcc;
+  --warning: var(--sol-yellow);
+  --warning-soft: #f6e8bf;
+  --danger: var(--sol-red);
+  --danger-soft: #f9dcda;
+  --violet-soft: #e6e6f5;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-foreground: var(--foreground);
+  --color-foreground-strong: var(--foreground-strong);
+  --color-foreground-muted: var(--foreground-muted);
+  --color-border: var(--border);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Tailwind (desde a v3) não seta cursor:pointer em <button> por padrão. */
+button:not(:disabled),
+[role="button"]:not(:disabled) {
+  cursor: pointer;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Scrollbar customizado, compacto, tom pastel */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--sol-base1) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: var(--sol-base1);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: var(--sol-base00);
+}
+
+/* Ajustes finos AntD para casar com a paleta pastel/compacta */
+.ant-layout {
+  background: transparent !important;
+}
+
+.ant-card {
+  border-color: var(--border) !important;
+}
+
+.ant-table {
+  background: transparent !important;
+}
+
+.ant-table-tbody > tr > td.ant-table-cell-row-hover {
+  background: #f7f7f8 !important;
+}
+
+/* Sem wrapperCol (layout="vertical" sem grid explícito), o Col interno do
+   Form.Item (.ant-form-item-control) não recebe span/flex — vira flex-item
+   com flex-basis:auto e encolhe pro conteúdo em vez de esticar pra linha
+   inteira. Afeta qualquer campo custom sem width:100% próprio (ex: grid de
+   fotos). Força esticar sempre, já que aqui não usamos layout horizontal. */
+.ant-form-item-control {
+  width: 100% !important;
+  max-width: 100% !important;
+  flex: 1 1 auto !important;
+}
+
+/* TipTap (RichTextEditor) */
+.rte-content :where(p) {
+  margin: 0 0 0.5em;
+}
+.rte-content :where(p:last-child) {
+  margin-bottom: 0;
+}
+.rte-content :where(ul, ol) {
+  margin: 0 0 0.5em;
+  padding-left: 1.25em;
+}
+.rte-content :where(li) {
+  margin: 0.15em 0;
+}
+.rte-content :where(strong) {
+  font-weight: 600;
+}
+.rte-content p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  color: var(--foreground-muted);
+  pointer-events: none;
+}
