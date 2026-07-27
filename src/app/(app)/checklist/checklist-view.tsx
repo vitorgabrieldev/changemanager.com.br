@@ -20,10 +20,11 @@ import {
   Typography,
 } from "antd";
 import dayjs from "dayjs";
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { CHECKLIST_CATEGORIES } from "@/lib/constants/checklist";
 import type { HouseholdMember } from "@/lib/data/household";
-import type { ChecklistCategory, Database } from "@/lib/types/database";
+import { createClient } from "@/lib/supabase/client";
+import type { ChecklistCategory } from "@/lib/types/database";
 import {
   createChecklistItem,
   deleteChecklistItem,
@@ -34,18 +35,23 @@ import {
   ChecklistItemFormModal,
   type ChecklistItemFormValues,
 } from "./item-form-modal";
-import { ChecklistItemViewDrawer } from "./item-view-drawer";
+import {
+  ChecklistItemViewDrawer,
+  type ChecklistItemSummary,
+} from "./item-view-drawer";
 
 const { Title, Text } = Typography;
 
-type ChecklistItem = Database["public"]["Tables"]["checklist_items"]["Row"];
+type ChecklistItem = ChecklistItemSummary;
 
 export function ChecklistView({
   initialItems,
   members,
+  householdId,
 }: {
   initialItems: ChecklistItem[];
   members: HouseholdMember[];
+  householdId: string;
 }) {
   const [items, setItems] = useState(initialItems);
   const [syncedItems, setSyncedItems] = useState(initialItems);
@@ -66,6 +72,48 @@ export function ChecklistView({
     setItems(initialItems);
   }
 
+  // Sem isso, quem está com a aba aberta só vê a mudança do outro morador
+  // depois de recarregar/navegar. A description continua de fora (mesmo
+  // motivo do select da listagem): quem não abriu o item não precisa dela.
+  useEffect(() => {
+    const supabase = createClient();
+    const channel = supabase
+      .channel(`checklist-items-${householdId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "checklist_items",
+          filter: `household_id=eq.${householdId}`,
+        },
+        (payload) => {
+          if (payload.eventType === "DELETE") {
+            const oldId = (payload.old as { id?: string }).id;
+            if (!oldId) return;
+            setItems((prev) => prev.filter((i) => i.id !== oldId));
+            return;
+          }
+
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars -- descartado de propósito
+          const { description: _description, ...summary } = payload.new as ChecklistItem & {
+            description?: string | null;
+          };
+          setItems((prev) => {
+            const exists = prev.some((i) => i.id === summary.id);
+            return exists
+              ? prev.map((i) => (i.id === summary.id ? { ...i, ...summary } : i))
+              : [...prev, summary];
+          });
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [householdId]);
+
   const membersById = useMemo(
     () => new Map(members.map((m) => [m.id, m])),
     [members],
@@ -85,7 +133,9 @@ export function ChecklistView({
   }, [items]);
 
   function handleToggle(item: ChecklistItem, checked: boolean) {
-    const previous = items;
+    // Reverte só este item em caso de erro — não a lista inteira, pra não
+    // desfazer outra edição otimista concluída com sucesso nesse meio-tempo.
+    const wasDone = item.is_done;
     setItems((prev) =>
       prev.map((i) => (i.id === item.id ? { ...i, is_done: checked } : i)),
     );
@@ -93,20 +143,23 @@ export function ChecklistView({
       try {
         await toggleChecklistItem(item.id, checked);
       } catch {
-        setItems(previous);
+        setItems((prev) =>
+          prev.map((i) => (i.id === item.id ? { ...i, is_done: wasDone } : i)),
+        );
         message.error("Não foi possível atualizar o item.");
       }
     });
   }
 
   function handleDelete(item: ChecklistItem) {
-    const previous = items;
     setItems((prev) => prev.filter((i) => i.id !== item.id));
     startTransition(async () => {
       try {
         await deleteChecklistItem(item.id);
       } catch {
-        setItems(previous);
+        setItems((prev) =>
+          prev.some((i) => i.id === item.id) ? prev : [...prev, item],
+        );
         message.error("Não foi possível excluir o item.");
       }
     });
@@ -253,6 +306,7 @@ export function ChecklistView({
         title={modalState?.mode === "edit" ? "Editar" : "Criar"}
         members={members}
         initialValues={toInitialValues(modalState)}
+        editingItemId={modalState?.mode === "edit" ? modalState.item.id : null}
         onClose={() => setModalState(null)}
         onSubmit={async (input) => {
           if (modalState?.mode === "edit") {
@@ -314,6 +368,7 @@ function toInitialValues(
     category: item.category as ChecklistCategory,
     assignedTo: item.assigned_to ?? undefined,
     dueDate: item.due_date ? dayjs(item.due_date) : undefined,
-    description: item.description ?? undefined,
+    // description não vem na listagem — o form busca sob demanda (ver
+    // editingItemId no ChecklistItemFormModal).
   };
 }

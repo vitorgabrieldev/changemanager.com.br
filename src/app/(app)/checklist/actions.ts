@@ -22,29 +22,36 @@ export async function createChecklistItem(input: ChecklistItemInput) {
 
   const supabase = await createClient();
 
-  const { data: maxPositionRow } = await supabase
-    .from("checklist_items")
-    .select("position")
-    .eq("household_id", member.household_id)
-    .order("position", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const { data: maxPositionRow } = await supabase
+      .from("checklist_items")
+      .select("position")
+      .eq("household_id", member.household_id)
+      .order("position", { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-  const nextPosition = (maxPositionRow?.position ?? 0) + 1;
+    const nextPosition = (maxPositionRow?.position ?? 0) + 1;
 
-  const { error } = await supabase.from("checklist_items").insert({
-    household_id: member.household_id,
-    title,
-    category: input.category,
-    assigned_to: input.assignedTo,
-    due_date: input.dueDate,
-    description: input.description,
-    position: nextPosition,
-    created_by: member.id,
-  });
+    const { error } = await supabase.from("checklist_items").insert({
+      household_id: member.household_id,
+      title,
+      category: input.category,
+      assigned_to: input.assignedTo,
+      due_date: input.dueDate,
+      description: input.description,
+      position: nextPosition,
+      created_by: member.id,
+    });
 
-  if (error) throw new Error(error.message);
-  revalidatePath("/checklist");
+    if (!error) {
+      revalidatePath("/checklist");
+      return;
+    }
+    if (error.code !== "23505") throw new Error(error.message);
+  }
+
+  throw new Error("Não foi possível criar o item, tente de novo.");
 }
 
 export async function updateChecklistItem(
@@ -101,4 +108,16 @@ export async function deleteChecklistItem(id: string) {
 
   if (error) throw new Error(error.message);
   revalidatePath("/checklist");
+}
+
+export async function getChecklistItemDescription(id: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("checklist_items")
+    .select("description")
+    .eq("id", id)
+    .single();
+
+  if (error) throw new Error(error.message);
+  return data.description;
 }

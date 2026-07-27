@@ -2,13 +2,14 @@
 
 import { App, Button, DatePicker, Drawer, Form, Input, Select } from "antd";
 import dayjs from "dayjs";
-import { useEffect, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { PiX } from "react-icons/pi";
 import { CHECKLIST_CATEGORIES } from "@/lib/constants/checklist";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import { SkeletonBone } from "@/components/ui/skeleton-bone";
 import type { HouseholdMember } from "@/lib/data/household";
 import type { ChecklistCategory } from "@/lib/types/database";
-import type { ChecklistItemInput } from "./actions";
+import { getChecklistItemDescription, type ChecklistItemInput } from "./actions";
 
 function isEmptyRichText(html?: string) {
   if (!html) return true;
@@ -30,6 +31,7 @@ export function ChecklistItemFormModal({
   members,
   initialValues,
   title,
+  editingItemId,
 }: {
   open: boolean;
   onClose: () => void;
@@ -37,22 +39,49 @@ export function ChecklistItemFormModal({
   members: HouseholdMember[];
   initialValues?: Partial<ChecklistItemFormValues>;
   title: string;
+  /** Id do item em edição — busca a description sob demanda (a listagem não
+   * traz esse campo). `null` no modo criar. */
+  editingItemId: string | null;
 }) {
   const [form] = Form.useForm<ChecklistItemFormValues>();
   const [pending, startTransition] = useTransition();
+  const [loadedItemId, setLoadedItemId] = useState<string | null>(null);
+  // Derivado, não setado no efeito — só o resultado (via .then/.catch) seta
+  // state de verdade, o que react-hooks/set-state-in-effect exige.
+  const descriptionLoading = editingItemId !== null && loadedItemId !== editingItemId;
   const { message } = App.useApp();
 
   useEffect(() => {
-    if (open) {
-      form.resetFields();
-      form.setFieldsValue({
-        title: "",
-        category: "geral",
-        description: "",
-        ...initialValues,
-      });
-    }
+    if (!open) return;
+    form.resetFields();
+    form.setFieldsValue({
+      title: "",
+      category: "geral",
+      description: "",
+      ...initialValues,
+    });
   }, [open, initialValues, form]);
+
+  useEffect(() => {
+    if (!open || !editingItemId || editingItemId === loadedItemId) return;
+
+    let cancelled = false;
+    getChecklistItemDescription(editingItemId)
+      .then((description) => {
+        if (cancelled) return;
+        form.setFieldsValue({ description: description ?? "" });
+        setLoadedItemId(editingItemId);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        message.error("Não foi possível carregar a descrição.");
+        setLoadedItemId(editingItemId);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, editingItemId, loadedItemId, form, message]);
 
   function handleFinish(values: ChecklistItemFormValues) {
     startTransition(async () => {
@@ -122,7 +151,11 @@ export function ChecklistItemFormModal({
         </Form.Item>
 
         <Form.Item name="description" label="Descrição">
-          <RichTextEditor />
+          {descriptionLoading ? (
+            <SkeletonBone className="h-24 w-full" />
+          ) : (
+            <RichTextEditor />
+          )}
         </Form.Item>
       </Form>
     </Drawer>

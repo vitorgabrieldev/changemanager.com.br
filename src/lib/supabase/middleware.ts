@@ -31,20 +31,25 @@ export async function updateSession(request: NextRequest) {
     },
   );
 
+  // getSession() só decodifica o cookie local (sem round-trip à Auth API,
+  // exceto perto do token expirar) — rápido, mas não confirma a assinatura.
+  // Seguro aqui porque essa checagem só decide um redirect de UX: a
+  // autorização de verdade é o getUser() em getCurrentMember() (chamado por
+  // todo layout/page protegido), que roda de novo depois e é quem manda.
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: { session },
+  } = await supabase.auth.getSession();
 
   const { pathname } = request.nextUrl;
 
-  if (!user && !isPublicPath(pathname)) {
+  if (!session && !isPublicPath(pathname)) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set("next", pathname);
     return NextResponse.redirect(url);
   }
 
-  if (user && pathname === "/login") {
+  if (session && pathname === "/login") {
     const url = request.nextUrl.clone();
     url.pathname = "/";
     url.search = "";

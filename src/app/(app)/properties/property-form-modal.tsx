@@ -1,14 +1,15 @@
 "use client";
 
 import { App, Button, Drawer, Form, Input, Select } from "antd";
-import { useEffect, useRef, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { PiX } from "react-icons/pi";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { NumberInput } from "@/components/ui/number-input";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import { SkeletonBone } from "@/components/ui/skeleton-bone";
 import { PROPERTY_STATUSES } from "@/lib/constants/properties";
 import type { PropertyStatus } from "@/lib/types/database";
-import type { PropertyInput } from "./actions";
+import { getPropertyNotes, type PropertyInput } from "./actions";
 import {
   PropertyImageManager,
   type PropertyImage,
@@ -56,24 +57,50 @@ export function PropertyFormModal({
 }) {
   const [form] = Form.useForm<PropertyFormValues>();
   const [pending, startTransition] = useTransition();
+  const [loadedPropertyId, setLoadedPropertyId] = useState<string | null>(null);
+  // Derivado, não setado no efeito — só o resultado (via .then/.catch) seta
+  // state de verdade, o que react-hooks/set-state-in-effect exige.
+  const notesLoading = propertyId !== null && loadedPropertyId !== propertyId;
   const { message } = App.useApp();
   const imageManagerRef = useRef<PropertyImageManagerHandle>(null);
 
   useEffect(() => {
-    if (open) {
-      // resetFields primeiro: o form persiste entre aberturas (o Drawer só
-      // desmonta o conteúdo, não o `form` do useForm), então sem isso um
-      // campo ausente do próximo setFieldsValue mantém o valor da sessão
-      // anterior (ex: editar um imóvel e depois abrir "criar" com lixo).
-      form.resetFields();
-      form.setFieldsValue({
-        title: "",
-        status: "candidato",
-        notes: "",
-        ...initialValues,
-      });
-    }
+    if (!open) return;
+
+    // resetFields primeiro: o form persiste entre aberturas (o Drawer só
+    // desmonta o conteúdo, não o `form` do useForm), então sem isso um
+    // campo ausente do próximo setFieldsValue mantém o valor da sessão
+    // anterior (ex: editar um imóvel e depois abrir "criar" com lixo).
+    form.resetFields();
+    form.setFieldsValue({
+      title: "",
+      status: "candidato",
+      notes: "",
+      ...initialValues,
+    });
   }, [open, initialValues, form]);
+
+  useEffect(() => {
+    // A listagem não traz `notes` — busca sob demanda ao editar.
+    if (!open || !propertyId || propertyId === loadedPropertyId) return;
+
+    let cancelled = false;
+    getPropertyNotes(propertyId)
+      .then((notes) => {
+        if (cancelled) return;
+        form.setFieldsValue({ notes: notes ?? "" });
+        setLoadedPropertyId(propertyId);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        message.error("Não foi possível carregar as observações.");
+        setLoadedPropertyId(propertyId);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, propertyId, loadedPropertyId, form, message]);
 
   function handleFinish(values: PropertyFormValues) {
     startTransition(async () => {
@@ -116,7 +143,12 @@ export function PropertyFormModal({
       footer={
         <div className="flex justify-end gap-2">
           <Button onClick={onClose}>Cancelar</Button>
-          <Button type="primary" loading={pending} onClick={() => form.submit()}>
+          <Button
+            type="primary"
+            loading={pending}
+            disabled={notesLoading}
+            onClick={() => form.submit()}
+          >
             Salvar
           </Button>
         </div>
@@ -203,7 +235,11 @@ export function PropertyFormModal({
         </div>
 
         <Form.Item name="notes" label="Observações">
-          <RichTextEditor />
+          {notesLoading ? (
+            <SkeletonBone className="h-24 w-full" />
+          ) : (
+            <RichTextEditor />
+          )}
         </Form.Item>
       </Form>
     </Drawer>

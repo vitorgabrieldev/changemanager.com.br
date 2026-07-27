@@ -20,13 +20,14 @@ import {
   Typography,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { useMemo, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import {
   PROPERTY_STATUSES,
   propertyStatusColor,
   propertyStatusLabel,
 } from "@/lib/constants/properties";
 import type { HouseholdMember } from "@/lib/data/household";
+import { createClient } from "@/lib/supabase/client";
 import type { Database, PropertyStatus } from "@/lib/types/database";
 import {
   createProperty,
@@ -39,11 +40,11 @@ import {
   type PropertyFormValues,
 } from "./property-form-modal";
 import type { PropertyImage } from "./property-image-manager";
-import { PropertyViewDrawer } from "./property-view-drawer";
+import { PropertyViewDrawer, type PropertySummary } from "./property-view-drawer";
 
 const { Title, Text } = Typography;
 
-type Property = Database["public"]["Tables"]["properties"]["Row"];
+type Property = PropertySummary;
 type PropertyRating = Database["public"]["Tables"]["property_ratings"]["Row"];
 
 const currency = new Intl.NumberFormat("pt-BR", {
@@ -69,12 +70,14 @@ export function PropertiesView({
   initialRatings,
   members,
   currentMemberId,
+  householdId,
   imageUrls,
 }: {
   initialProperties: Property[];
   initialRatings: PropertyRating[];
   members: HouseholdMember[];
   currentMemberId: string;
+  householdId: string;
   imageUrls: Record<string, string>;
 }) {
   const [properties, setProperties] = useState(initialProperties);
@@ -97,15 +100,85 @@ export function PropertiesView({
     setProperties(initialProperties);
   }
 
-  function imagesFor(property: Property): PropertyImage[] {
-    return (property.images ?? [])
-      .map((path) => ({ path, url: imageUrls[path] }))
-      .filter((img): img is PropertyImage => Boolean(img.url));
-  }
+  // Sem isso, quem está com a aba aberta só vê o imóvel/nota do outro
+  // morador depois de recarregar/navegar. `notes` fica de fora do merge
+  // (mesmo motivo do select da listagem) — quem não abriu o imóvel não
+  // precisa dela. property_ratings não tem household_id pra filtrar na
+  // subscription, mas a RLS da tabela já restringe o que chega pra cada um.
+  useEffect(() => {
+    const supabase = createClient();
+    const channel = supabase
+      .channel(`properties-${householdId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "properties",
+          filter: `household_id=eq.${householdId}`,
+        },
+        (payload) => {
+          if (payload.eventType === "DELETE") {
+            const oldId = (payload.old as { id?: string }).id;
+            if (!oldId) return;
+            setProperties((prev) => prev.filter((p) => p.id !== oldId));
+            return;
+          }
+
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars -- descartado de propósito
+          const { notes: _notes, ...summary } = payload.new as Property & {
+            notes?: string | null;
+          };
+          setProperties((prev) => {
+            const exists = prev.some((p) => p.id === summary.id);
+            return exists
+              ? prev.map((p) => (p.id === summary.id ? { ...p, ...summary } : p))
+              : [...prev, summary];
+          });
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "property_ratings" },
+        (payload) => {
+          if (payload.eventType === "DELETE") {
+            const oldId = (payload.old as { id?: string }).id;
+            if (!oldId) return;
+            setRatings((prev) => prev.filter((r) => r.id !== oldId));
+            return;
+          }
+
+          const row = payload.new as PropertyRating;
+          setRatings((prev) => {
+            const withoutThis = prev.filter(
+              (r) =>
+                !(
+                  r.property_id === row.property_id &&
+                  r.household_member_id === row.household_member_id
+                ),
+            );
+            return [...withoutThis, row];
+          });
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [householdId]);
+
+  const imagesFor = useCallback(
+    (property: Property): PropertyImage[] =>
+      (property.images ?? [])
+        .map((path) => ({ path, url: imageUrls[path] }))
+        .filter((img): img is PropertyImage => Boolean(img.url)),
+    [imageUrls],
+  );
 
   const formImages = useMemo(
     () => (modalState?.mode === "edit" ? imagesFor(modalState.property) : []),
-    [modalState],
+    [modalState, imagesFor],
   );
 
   const ratingsByProperty = useMemo(() => {
@@ -117,50 +190,67 @@ export function PropertiesView({
     return map;
   }, [ratings]);
 
-  function handleDelete(property: Property) {
-    const previous = properties;
-    setProperties((prev) => prev.filter((p) => p.id !== property.id));
-    startTransition(async () => {
-      try {
-        await deleteProperty(property.id);
-      } catch {
-        setProperties(previous);
-        message.error("Não foi possível excluir o imóvel.");
-      }
-    });
-  }
+  const handleDelete = useCallback(
+    (property: Property) => {
+      setProperties((prev) => prev.filter((p) => p.id !== property.id));
+      startTransition(async () => {
+        try {
+          await deleteProperty(property.id);
+        } catch {
+          setProperties((prev) =>
+            prev.some((p) => p.id === property.id) ? prev : [...prev, property],
+          );
+          message.error("Não foi possível excluir o imóvel.");
+        }
+      });
+    },
+    [message],
+  );
 
-  function handleRate(propertyId: string, score: number) {
-    const previous = ratings;
-    setRatings((prev) => {
-      const withoutMine = prev.filter(
-        (r) =>
-          !(r.property_id === propertyId && r.household_member_id === currentMemberId),
+  const handleRate = useCallback(
+    (propertyId: string, score: number) => {
+      // Reverte só a nota deste imóvel/membro em caso de erro — não o array
+      // inteiro, pra não desfazer a nota do outro morador se ela chegou (via
+      // realtime) nesse meio-tempo.
+      const previousRating = ratings.find(
+        (r) => r.property_id === propertyId && r.household_member_id === currentMemberId,
       );
-      return [
-        ...withoutMine,
-        {
-          id: `optimistic-${propertyId}`,
+
+      function replaceMine(
+        prev: PropertyRating[],
+        mine: PropertyRating | undefined,
+      ) {
+        const withoutMine = prev.filter(
+          (r) =>
+            !(r.property_id === propertyId && r.household_member_id === currentMemberId),
+        );
+        return mine ? [...withoutMine, mine] : withoutMine;
+      }
+
+      setRatings((prev) =>
+        replaceMine(prev, {
+          id: previousRating?.id ?? `optimistic-${propertyId}`,
           property_id: propertyId,
           household_member_id: currentMemberId,
           score,
           comment: null,
-          created_at: new Date().toISOString(),
+          created_at: previousRating?.created_at ?? new Date().toISOString(),
           updated_at: new Date().toISOString(),
-        },
-      ];
-    });
-    startTransition(async () => {
-      try {
-        await upsertPropertyRating(propertyId, score);
-      } catch {
-        setRatings(previous);
-        message.error("Não foi possível salvar sua nota.");
-      }
-    });
-  }
+        }),
+      );
+      startTransition(async () => {
+        try {
+          await upsertPropertyRating(propertyId, score);
+        } catch {
+          setRatings((prev) => replaceMine(prev, previousRating));
+          message.error("Não foi possível salvar sua nota.");
+        }
+      });
+    },
+    [ratings, currentMemberId, message],
+  );
 
-  const columns: ColumnsType<Property> = [
+  const columns: ColumnsType<Property> = useMemo(() => [
     {
       title: "Imóvel",
       dataIndex: "title",
@@ -319,7 +409,7 @@ export function PropertiesView({
         </span>
       ),
     },
-  ];
+  ], [ratingsByProperty, members, currentMemberId, handleRate, handleDelete, modal]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -420,6 +510,7 @@ function toInitialValues(
     parkingSpots: property.parking_spots ?? undefined,
     areaM2: property.area_m2 ?? undefined,
     mapsUrl: property.maps_url ?? undefined,
-    notes: property.notes ?? undefined,
+    // notes não vem na listagem — o form busca sob demanda (ver `propertyId`
+    // no PropertyFormModal).
   };
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { Carousel } from "antd";
+import Image from "next/image";
 import { useRef } from "react";
 import { useFancybox } from "@/components/ui/use-fancybox";
 import type { PropertyImage } from "./property-image-manager";
@@ -28,13 +29,14 @@ export function PropertyImageCarousel({
             key={img.path}
             href={img.url}
             data-fancybox={`property-view-${groupId}`}
-            className="block aspect-video w-full"
+            className="relative block aspect-video w-full"
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            <Image
               src={img.url}
               alt=""
-              className="h-full w-full object-cover"
+              fill
+              sizes="(max-width: 768px) 100vw, 480px"
+              className="object-cover"
             />
           </a>
         ))}

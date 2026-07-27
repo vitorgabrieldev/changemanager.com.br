@@ -8,6 +8,17 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "20mb",
     },
   },
+  images: {
+    // Fotos de imóveis são servidas via signed URL do Supabase Storage
+    // (domínio muda por projeto/ambiente, daí o wildcard em vez do ref fixo).
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "*.supabase.co",
+        pathname: "/storage/v1/object/sign/**",
+      },
+    ],
+  },
 };
 
 export default nextConfig;

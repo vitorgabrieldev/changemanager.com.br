@@ -1,6 +1,7 @@
 "use client";
 
 import { App } from "antd";
+import Image from "next/image";
 import {
   forwardRef,
   useImperativeHandle,
@@ -11,6 +12,7 @@ import {
 import { PiEye, PiTrash, PiUploadSimple } from "react-icons/pi";
 import { Loader } from "@/components/ui/loader";
 import { useFancybox } from "@/components/ui/use-fancybox";
+import { compressImage } from "@/lib/image/compress-image";
 import { removePropertyImage, uploadPropertyImage } from "./actions";
 
 export type PropertyImage = { path: string; url: string };
@@ -74,11 +76,15 @@ export const PropertyImageManager = forwardRef<
     }
     if (images.length === 0) return;
 
+    // Fotos de celular chegam com vários MB — comprime antes de estagiar ou
+    // subir, tanto o preview quanto o upload usam o arquivo já reduzido.
+    const compressed = await Promise.all(images.map(compressImage));
+
     if (!propertyId) {
       // Imóvel ainda não existe: fica só local até o "Salvar" publicar junto.
       setItems((prev) => [
         ...prev,
-        ...images.map((file) => ({
+        ...compressed.map((file) => ({
           key: crypto.randomUUID(),
           url: URL.createObjectURL(file),
           file,
@@ -87,16 +93,16 @@ export const PropertyImageManager = forwardRef<
       return;
     }
 
-    setUploadProgress({ current: 0, total: images.length });
+    setUploadProgress({ current: 0, total: compressed.length });
     try {
-      for (const [index, file] of images.entries()) {
+      for (const [index, file] of compressed.entries()) {
         const formData = new FormData();
         formData.set("file", file);
         // Sequencial de propósito: uploadPropertyImage lê e regrava
         // `images` inteiro, então uploads em paralelo pisariam um no outro.
         const result = await uploadPropertyImage(propertyId, formData);
         setItems((prev) => [...prev, { key: result.path, url: result.url }]);
-        setUploadProgress({ current: index + 1, total: images.length });
+        setUploadProgress({ current: index + 1, total: compressed.length });
       }
     } catch (err) {
       message.error(
@@ -135,8 +141,14 @@ export const PropertyImageManager = forwardRef<
           key={item.key}
           className="group relative aspect-square overflow-hidden rounded-sm border border-border bg-surface-muted"
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={item.url} alt="" className="h-full w-full object-cover" />
+          <Image
+            src={item.url}
+            alt=""
+            fill
+            unoptimized={Boolean(item.file)}
+            sizes="(max-width: 768px) 33vw, 140px"
+            className="object-cover"
+          />
           <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/45 opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100">
             <a
               href={item.url}

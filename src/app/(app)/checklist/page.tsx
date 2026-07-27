@@ -12,7 +12,9 @@ export default async function ChecklistPage() {
   const [{ data: items, error }, members] = await Promise.all([
     supabase
       .from("checklist_items")
-      .select("*")
+      .select(
+        "id, household_id, title, category, is_done, position, due_date, assigned_to, created_by, done_by, done_at, created_at, updated_at",
+      )
       .eq("household_id", member.household_id)
       .order("position", { ascending: true }),
     getHouseholdMembers(member.household_id),
@@ -20,5 +22,11 @@ export default async function ChecklistPage() {
 
   if (error) throw new Error(error.message);
 
-  return <ChecklistView initialItems={items ?? []} members={members} />;
+  return (
+    <ChecklistView
+      initialItems={items ?? []}
+      members={members}
+      householdId={member.household_id}
+    />
+  );
 }

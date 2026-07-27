@@ -1,6 +1,7 @@
 "use client";
 
 import { Avatar, Button, Drawer, Rate, Tag, Typography } from "antd";
+import { useEffect, useState } from "react";
 import {
   PiLinkSimple,
   PiMapPin,
@@ -9,6 +10,7 @@ import {
   PiX,
 } from "react-icons/pi";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import { SkeletonBone } from "@/components/ui/skeleton-bone";
 import {
   propertyStatusColor,
   propertyStatusLabel,
@@ -16,12 +18,17 @@ import {
 import type { HouseholdMember } from "@/lib/data/household";
 import { toEmbeddableMapsUrl } from "@/lib/maps";
 import type { Database } from "@/lib/types/database";
+import { getPropertyNotes } from "./actions";
 import { PropertyImageCarousel } from "./property-image-carousel";
 import type { PropertyImage } from "./property-image-manager";
 
 const { Title, Text } = Typography;
 
-type Property = Database["public"]["Tables"]["properties"]["Row"];
+export type PropertySummary = Omit<
+  Database["public"]["Tables"]["properties"]["Row"],
+  "notes"
+>;
+type Property = PropertySummary;
 
 const currency = new Intl.NumberFormat("pt-BR", {
   style: "currency",
@@ -66,6 +73,33 @@ export function PropertyViewDrawer({
   onClose: () => void;
   onEdit: () => void;
 }) {
+  const [notes, setNotes] = useState<string | null>(null);
+  const [loadedPropertyId, setLoadedPropertyId] = useState<string | null>(null);
+  const propertyId = open ? (property?.id ?? null) : null;
+  // Derivado, não setado no efeito — só o resultado (via .then/.catch) seta
+  // state de verdade, o que react-hooks/set-state-in-effect exige.
+  const notesLoading = propertyId !== null && loadedPropertyId !== propertyId;
+
+  // A listagem não traz `notes` — busca sob demanda ao abrir o drawer.
+  useEffect(() => {
+    if (propertyId === null || propertyId === loadedPropertyId) return;
+    let cancelled = false;
+    getPropertyNotes(propertyId)
+      .then((value) => {
+        if (cancelled) return;
+        setNotes(value);
+        setLoadedPropertyId(propertyId);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setNotes(null);
+        setLoadedPropertyId(propertyId);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [propertyId, loadedPropertyId]);
+
   const ratings = property ? ratingsByProperty.get(property.id) : undefined;
   const scores = Array.from(ratings?.values() ?? []);
   const avg = scores.length
@@ -270,10 +304,16 @@ export function PropertyViewDrawer({
             </div>
           </Section>
 
-          {property.notes && (
+          {notesLoading ? (
             <Section label="Observações">
-              <RichTextEditor value={property.notes} editable={false} />
+              <SkeletonBone className="h-16 w-full" />
             </Section>
+          ) : (
+            notes && (
+              <Section label="Observações">
+                <RichTextEditor value={notes} editable={false} />
+              </Section>
+            )
           )}
         </div>
       )}
