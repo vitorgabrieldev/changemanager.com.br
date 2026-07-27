@@ -1,6 +1,11 @@
 "use client";
 
-import { PiHouseLine, PiListChecks, PiSignOut } from "react-icons/pi";
+import {
+  PiHouseLine,
+  PiListChecks,
+  PiShoppingCartSimple,
+  PiSignOut,
+} from "react-icons/pi";
 import { Avatar, Button, Layout, Menu, Typography } from "antd";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -21,6 +26,11 @@ const NAV_ITEMS = [
     key: "/properties",
     icon: <PiHouseLine size={18} />,
     label: <Link href="/properties">Imóveis</Link>,
+  },
+  {
+    key: "/compras",
+    icon: <PiShoppingCartSimple size={18} />,
+    label: <Link href="/compras">Compras</Link>,
   },
 ];
 
